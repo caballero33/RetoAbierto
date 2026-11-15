@@ -1,0 +1,142 @@
+### ==============================================================================
+### RETOABIERTO API - SUITE DE PRUEBAS AUTOMATIZADA (.http)
+### Clase 7 y Rúbrica Fase 2: Clean Architecture, Multi-Tenant, FluentValidation y JWT
+### ==============================================================================
+
+@baseUrl = http://localhost:5000/api
+@json = application/json
+
+### ------------------------------------------------------------------------------
+### 1. AUTENTICACIÓN Y MULTI-TENANCY
+### ------------------------------------------------------------------------------
+
+### 1.1 Registrar una Nueva Empresa (Tenant) con su Administrador
+# @name registroEmpresa
+POST {{baseUrl}}/auth/registro-empresa
+Content-Type: {{json}}
+
+{
+  "empresaNombre": "TechSolutions Global S.A.",
+  "empresaDescripcion": "Empresa de desarrollo de software e inteligencia artificial",
+  "empresaCorreo": "contacto@techsolutions.com",
+  "adminNombre": "Carlos Administrador",
+  "adminCorreo": "admin@techsolutions.com",
+  "password": "PasswordSeguro2026!"
+}
+
+### 1.2 Inicio de Sesión (Login) y Obtención del Token JWT con Claims (sub, rol, empresaId)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "correo": "admin@techsolutions.com",
+  "password": "PasswordSeguro2026!"
+}
+
+### Extraemos el token JWT retornado
+@token = {{loginAdmin.response.body.token}}
+@empresaId = {{loginAdmin.response.body.usuario.empresaId}}
+
+### ------------------------------------------------------------------------------
+### 2. MÓDULO 06: CATÁLOGO DE HABILIDADES
+### ------------------------------------------------------------------------------
+
+### 2.1 Consultar Catálogo de Habilidades
+# @name getHabilidades
+GET {{baseUrl}}/habilidades
+Authorization: Bearer {{token}}
+
+### ------------------------------------------------------------------------------
+### 3. MÓDULO 03: GESTIÓN DE RETOS (Por Empresa - Aislamiento Multi-Tenant)
+### ------------------------------------------------------------------------------
+
+### 3.1 Prueba de Validación Semántica con FluentValidation (Envío de Datos Inválidos)
+### Se espera: HTTP 400 Bad Request + Formato estándar interceptado por ExceptionMiddleware
+POST {{baseUrl}}/retos
+Authorization: Bearer {{token}}
+Content-Type: {{json}}
+
+{
+  "titulo": "",
+  "descripcion": "",
+  "entregables": "",
+  "maxIntegrantes": 0,
+  "horasEstimadas": -5,
+  "fechaLimite": "2020-01-01",
+  "habilidades": []
+}
+
+### 3.2 Crear un Reto Válido en Estado Borrador
+# @name crearReto
+POST {{baseUrl}}/retos
+Authorization: Bearer {{token}}
+Content-Type: {{json}}
+
+{
+  "titulo": "Desarrollo de Microservicio de Pagos Resiliente",
+  "descripcion": "Construir una API transaccional en .NET con soporte multi-empresa y base de datos relacional.",
+  "entregables": "Repositorio en GitHub con Dockerfile, pruebas unitarias y documentación OpenAPI.",
+  "maxIntegrantes": 4,
+  "horasEstimadas": 60,
+  "fechaLimite": "2027-06-30T00:00:00Z",
+  "habilidades": [
+    {
+      "habilidadId": "d0000000-0000-0000-0000-000000000001",
+      "nivelRequerido": 4
+    }
+  ]
+}
+
+@nuevoRetoId = {{crearReto.response.body.id}}
+
+### 3.3 Consultar Retos de Mi Empresa (Filtro Global HasQueryFilter Aplicado)
+GET {{baseUrl}}/retos?pagina=1&tamano=10
+Authorization: Bearer {{token}}
+
+### 3.4 Cambiar Estado del Reto: Borrador -> Abierto
+PATCH {{baseUrl}}/retos/{{nuevoRetoId}}/estado
+Authorization: Bearer {{token}}
+Content-Type: {{json}}
+
+{
+  "estado": "Abierto"
+}
+
+### 3.5 Probar Regla de Negocio: Transición Inválida (debe responder 409 Conflict)
+PATCH {{baseUrl}}/retos/{{nuevoRetoId}}/estado
+Authorization: Bearer {{token}}
+Content-Type: {{json}}
+
+{
+  "estado": "Borrador"
+}
+
+### ------------------------------------------------------------------------------
+### 4. MOTOR DE MATCHING EXPLICABLE (Fórmula: 100 * (0.5H + 0.3D + 0.2E))
+### ------------------------------------------------------------------------------
+
+### 4.1 Obtener Recomendaciones de Estudiantes para el Reto
+GET {{baseUrl}}/retos/{{nuevoRetoId}}/recomendaciones?top=5
+Authorization: Bearer {{token}}
+
+### ------------------------------------------------------------------------------
+### 5. PERFIL DE EMPRESA Y GESTIÓN DE USUARIOS
+### ------------------------------------------------------------------------------
+
+### 5.1 Consultar Datos de Mi Empresa
+GET {{baseUrl}}/empresa
+Authorization: Bearer {{token}}
+
+### 5.2 Listar Usuarios de la Empresa
+GET {{baseUrl}}/empresa/usuarios
+Authorization: Bearer {{token}}
+
+### 5.3 Probar Regla de Seguridad: Intentar desactivarse a sí mismo como único Admin (409 Conflict)
+PATCH {{baseUrl}}/empresa/usuarios/{{loginAdmin.response.body.usuario.id}}
+Authorization: Bearer {{token}}
+Content-Type: {{json}}
+
+{
+  "activo": false
+}
