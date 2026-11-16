@@ -69,7 +69,6 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -77,7 +76,6 @@ app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.MapScalarApiReference(options =>
     {
         options.Title = "RetoAbierto API Docs";

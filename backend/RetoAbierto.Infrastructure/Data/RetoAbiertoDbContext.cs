@@ -68,12 +68,12 @@ public class RetoAbiertoDbContext : DbContext, IApplicationDbContext
     IQueryable<EstudianteHabilidad> IApplicationDbContext.EstudianteHabilidades => EstudianteHabilidades;
     IQueryable<RetoHabilidad> IApplicationDbContext.RetoHabilidades => RetoHabilidades;
 
-    public async Task AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class
+    public new async Task AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class
     {
         await Set<TEntity>().AddAsync(entity, cancellationToken);
     }
 
-    public void Remove<TEntity>(TEntity entity) where TEntity : class
+    public new void Remove<TEntity>(TEntity entity) where TEntity : class
     {
         Set<TEntity>().Remove(entity);
     }
