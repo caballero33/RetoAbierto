@@ -60,3 +60,15 @@ Abre en tu navegador:
 ```
 http://localhost:5000/scalar/v1
 ```
+
+## Pruebas de seguridad multiempresa
+
+El proyecto `backend/RetoAbierto.IntegrationTests` comprueba el aislamiento entre empresas y los accesos autorizados de estudiantes y universidades, además del inicio de sesión y el cambio de empresa. Usa datos ficticios en SQLite en memoria; no necesita Docker ni modifica la base PostgreSQL del equipo.
+
+Desde la raíz del repositorio, ejecuta:
+
+```bash
+dotnet test backend/RetoAbierto.sln
+```
+
+Se requiere el SDK de .NET 8 o compatible y acceso a NuGet para restaurar los paquetes la primera vez. Estas pruebas no sustituyen la verificación HTTP de la API ni la ejecución contra PostgreSQL.
