@@ -11,7 +11,7 @@ RUN dotnet restore RetoAbierto.API/RetoAbierto.API.csproj
 COPY . .
 RUN dotnet publish RetoAbierto.API/RetoAbierto.API.csproj -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
