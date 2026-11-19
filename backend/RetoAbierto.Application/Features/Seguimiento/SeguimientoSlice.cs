@@ -216,7 +216,10 @@ namespace RetoAbierto.Application.Features.Seguimiento.Services
             if (!esParteDelEquipo)
                 throw new ForbiddenException("El estudiante no pertenece al equipo asignado a esta meta.");
 
-            var estudiante = _context.Estudiantes.FirstOrDefault(e => e.Id == estudianteId);
+            // CORRECCIÓN DE COMPATIBILIDAD: antes se leía estudiante.Usuario.Nombre sin cargar Usuario.
+            // La prueba de avances detectó una referencia nula. Ahora se consulta directamente el nombre,
+            // conservando la comprobación anterior de pertenencia a la asignación.
+            var nombreEstudiante = _context.Estudiantes.Where(e => e.Id == estudianteId).Select(e => e.Usuario.Nombre).FirstOrDefault();
 
             var avance = new Avance
             {
@@ -235,7 +238,7 @@ namespace RetoAbierto.Application.Features.Seguimiento.Services
                 Id = avance.Id,
                 MetaId = avance.MetaId,
                 EstudianteId = estudianteId,
-                EstudianteNombre = estudiante?.Usuario.Nombre ?? "Estudiante",
+                EstudianteNombre = nombreEstudiante ?? "Estudiante",
                 Descripcion = avance.Descripcion,
                 EvidenciaUrl = avance.EvidenciaUrl,
                 FechaRegistro = avance.FechaRegistro.ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -272,7 +275,10 @@ namespace RetoAbierto.Application.Features.Seguimiento.Services
             if (request.Fecha < asignacion.FechaInicio.Date || request.Fecha > asignacion.FechaFin.Date)
                 throw new ConflictException("La fecha debe encontrarse dentro del rango de la asignación.");
 
-            var estudiante = _context.Estudiantes.FirstOrDefault(e => e.Id == estudianteId);
+            // CORRECCIÓN DE COMPATIBILIDAD: el registro de horas tenía el mismo acceso a Usuario no cargado.
+            // Se obtiene el nombre en la consulta para construir la respuesta, sin cambiar los permisos
+            // de participación ni la validación de fechas que se comprueban arriba.
+            var nombreEstudiante = _context.Estudiantes.Where(e => e.Id == estudianteId).Select(e => e.Usuario.Nombre).FirstOrDefault();
 
             var reg = new RegistroHoras
             {
@@ -290,7 +296,7 @@ namespace RetoAbierto.Application.Features.Seguimiento.Services
             {
                 Id = reg.Id,
                 EstudianteId = estudianteId,
-                EstudianteNombre = estudiante?.Usuario.Nombre ?? "Estudiante",
+                EstudianteNombre = nombreEstudiante ?? "Estudiante",
                 Fecha = reg.Fecha.ToString("yyyy-MM-dd"),
                 Horas = reg.Horas,
                 Descripcion = reg.Descripcion

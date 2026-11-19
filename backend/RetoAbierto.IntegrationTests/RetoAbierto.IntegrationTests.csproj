@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <!-- antes no había un proveedor relacional para estos escenarios
+         SQLite permite probar consultas y guardado con datos en memoria sin usar PostgreSQL real
+         Este paquete pertenece solo a pruebas; no cambia el proveedor del backend. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <!-- Permite acceder a las clases y metodos de la infraestructura -->
+  <ItemGroup>
+    <!-- Las pruebas necesitan el contexto y TenantService reales para comprobar la corrección
+         La referencia permite usar ese código; por sí sola no abre conexiones ni ejecuta migraciones -->
+    <ProjectReference Include="..\RetoAbierto.Infrastructure\RetoAbierto.Infrastructure.csproj" />  
+  </ItemGroup>
+</Project>

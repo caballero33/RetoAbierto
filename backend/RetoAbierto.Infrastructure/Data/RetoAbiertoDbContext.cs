@@ -4,7 +4,9 @@ using RetoAbierto.Domain.Entities;
 
 namespace RetoAbierto.Infrastructure.Data;
 
-public class RetoAbiertoDbContext : DbContext, IApplicationDbContext
+// ORGANIZACIÓN DE LA CORRECCIÓN: partial reparte el mismo contexto entre este archivo,
+// Access (consultas autorizadas) y Writes (guardado). No crea otro contexto ni cambia tablas.
+public partial class RetoAbiertoDbContext : DbContext, IApplicationDbContext
 {
     private readonly ITenantService _tenantService;
 
@@ -52,21 +54,27 @@ public class RetoAbiertoDbContext : DbContext, IApplicationDbContext
     IQueryable<Empresa> IApplicationDbContext.Empresas => Empresas;
     IQueryable<Rol> IApplicationDbContext.Roles => Roles;
     IQueryable<EmpresaUsuario> IApplicationDbContext.EmpresaUsuarios => EmpresaUsuarios;
-    IQueryable<Reto> IApplicationDbContext.Retos => Retos;
+    // CORRECCIÓN DE ACCESO: antes Application usaba directamente el conjunto de retos.
+    // Ahora pasa por una consulta que conserva el catálogo y la participación autorizada.
+    IQueryable<Reto> IApplicationDbContext.Retos => ConsultaRetos();
     IQueryable<Pago> IApplicationDbContext.Pagos => Pagos;
     IQueryable<Recompensa> IApplicationDbContext.Recompensas => Recompensas;
     IQueryable<RecompensaEntrega> IApplicationDbContext.RecompensaEntregas => RecompensaEntregas;
-    IQueryable<Equipo> IApplicationDbContext.Equipos => Equipos;
-    IQueryable<EquipoIntegrante> IApplicationDbContext.EquipoIntegrantes => EquipoIntegrantes;
-    IQueryable<Postulacion> IApplicationDbContext.Postulaciones => Postulaciones;
-    IQueryable<Asignacion> IApplicationDbContext.Asignaciones => Asignaciones;
-    IQueryable<Meta> IApplicationDbContext.Metas => Metas;
-    IQueryable<Avance> IApplicationDbContext.Avances => Avances;
-    IQueryable<RegistroHoras> IApplicationDbContext.RegistroHoras => RegistroHoras;
-    IQueryable<Evaluacion> IApplicationDbContext.Evaluaciones => Evaluaciones;
+    // CORRECCIÓN DE ACCESO: estos conjuntos antes dependían del permiso global por empresa nula.
+    // Ahora las consultas de Access limitan equipos y seguimiento según empresa o participación.
+    // Así los estudiantes y universidades no necesitan recibir acceso general a todos los registros.
+    IQueryable<Equipo> IApplicationDbContext.Equipos => ConsultaEquipos();
+    IQueryable<EquipoIntegrante> IApplicationDbContext.EquipoIntegrantes => ConsultaEquipoIntegrantes();
+    IQueryable<Postulacion> IApplicationDbContext.Postulaciones => ConsultaPostulaciones();
+    IQueryable<Asignacion> IApplicationDbContext.Asignaciones => ConsultaAsignaciones();
+    IQueryable<Meta> IApplicationDbContext.Metas => ConsultaMetas();
+    IQueryable<Avance> IApplicationDbContext.Avances => ConsultaAvances();
+    IQueryable<RegistroHoras> IApplicationDbContext.RegistroHoras => ConsultaRegistroHoras();
+    IQueryable<Evaluacion> IApplicationDbContext.Evaluaciones => ConsultaEvaluaciones();
     IQueryable<Habilidad> IApplicationDbContext.Habilidades => Habilidades;
     IQueryable<EstudianteHabilidad> IApplicationDbContext.EstudianteHabilidades => EstudianteHabilidades;
-    IQueryable<RetoHabilidad> IApplicationDbContext.RetoHabilidades => RetoHabilidades;
+    // Las habilidades del reto siguen su acceso autorizado; antes también quedaban abiertas con empresa nula.
+    IQueryable<RetoHabilidad> IApplicationDbContext.RetoHabilidades => ConsultaRetoHabilidades();
 
     public new async Task AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class
     {
@@ -466,47 +474,56 @@ public class RetoAbiertoDbContext : DbContext, IApplicationDbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // CORRECCIÓN DE SEGURIDAD MULTIEMPRESA (los 14 filtros siguientes):
+        // Antes, EmpresaId nulo permitía consultar filas de todas las empresas.
+        // Ahora cada consulta empresarial exige empresa y rol autorizados, y compara el dueño de la fila.
+        // Las excepciones de login, catálogo y participación se limitan por separado en Access.
+        // Estos filtros controlan lecturas; Writes comprueba las operaciones al guardar.
         modelBuilder.Entity<EmpresaUsuario>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<Reto>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
+        // Pagos y recompensas mantienen el filtro empresarial: consultar el catálogo no abre estos registros.
         modelBuilder.Entity<Pago>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<Recompensa>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<RecompensaEntrega>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
+        // Equipos y postulaciones se cierran aquí; Access permite únicamente la participación estudiantil propia.
         modelBuilder.Entity<Equipo>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<EquipoIntegrante>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<Postulacion>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<Asignacion>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
+        // El seguimiento también se aísla: Access limita sus excepciones al estudiante o universidad relacionados.
         modelBuilder.Entity<Meta>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<Avance>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<RegistroHoras>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
         modelBuilder.Entity<Evaluacion>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
 
+        // Las habilidades de retos privados no se abren por empresa nula; Access conserva las del catálogo autorizado.
         modelBuilder.Entity<RetoHabilidad>()
-            .HasQueryFilter(e => _tenantService.EmpresaId == null || e.EmpresaId == _tenantService.EmpresaId);
+            .HasQueryFilter(e => EmpresaAutorizada && e.EmpresaId == EmpresaActual);
     }
 }
 
