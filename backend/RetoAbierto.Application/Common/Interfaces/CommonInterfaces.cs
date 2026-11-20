@@ -28,6 +28,12 @@ public interface IApplicationDbContext
     IQueryable<EstudianteHabilidad> EstudianteHabilidades { get; }
     IQueryable<RetoHabilidad> RetoHabilidades { get; }
 
+    // consultar membresias despues de verificar la identidad.
+    // Correcion de conpatibilidad: cerrar el filtro empresarial ocultaría las membresias
+    // durante el login o al cambiar de empresa esta consulta exige indicar el usuario verificado
+    // y solo devuelve sus vínculos activos, no concede acceso a las membresias de todos.
+    IQueryable<EmpresaUsuario> MembresiasDeUsuario(Guid usuarioId);
+
     Task AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class;
     void Remove<TEntity>(TEntity entity) where TEntity : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
