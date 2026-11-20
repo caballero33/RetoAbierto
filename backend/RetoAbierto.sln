@@ -10,6 +10,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RetoAbierto.Infrastructure"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RetoAbierto.API", "RetoAbierto.API\RetoAbierto.API.csproj", "{C4444444-4444-4444-4444-444444444444}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetoAbierto.IntegrationTests", "RetoAbierto.IntegrationTests\RetoAbierto.IntegrationTests.csproj", "{B79432D2-FD2B-4A97-8E77-B91475F96BA5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,5 +34,9 @@ Global
 		{C4444444-4444-4444-4444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C4444444-4444-4444-4444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C4444444-4444-4444-4444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B79432D2-FD2B-4A97-8E77-B91475F96BA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B79432D2-FD2B-4A97-8E77-B91475F96BA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B79432D2-FD2B-4A97-8E77-B91475F96BA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B79432D2-FD2B-4A97-8E77-B91475F96BA5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

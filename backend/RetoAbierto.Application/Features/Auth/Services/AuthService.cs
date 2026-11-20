@@ -114,7 +114,11 @@ public class AuthService : IAuthService
             universidadId = estudiante.UniversidadId;
         }
 
-        var relacionesEmpresa = _context.EmpresaUsuarios
+        // Correccion para conservar el login:
+        // Antes se consultaba EmpresaUsuarios gracias al filtro abierto cuando no había empresa
+        // Ahora, despues de verificar la contraseña, se consultan solo los vinculos de ese usuario
+        // Esto permite elegir su empresa inicial sin abrir los datos empresariales al resto de usuarios
+        var relacionesEmpresa = _context.MembresiasDeUsuario(usuario.Id)
             .Where(eu => eu.UsuarioId == usuario.Id && eu.Activo && eu.Empresa.Activa)
             .Select(eu => new { eu.EmpresaId, eu.Empresa.Nombre, RolNombre = eu.Rol.Nombre })
             .ToList();
@@ -187,7 +191,11 @@ public class AuthService : IAuthService
         if (usuario == null || !usuario.Activo)
             throw new NotFoundException("Usuario no encontrado.");
 
-        var relacion = _context.EmpresaUsuarios
+        // Correcion del cambio de empresa:
+        // El filtro de la empresa A ocultaría el vínculo con B aunque el usuario perteneciera a ambas.
+        // Se buscan sus membresias activas y se exige que una coincida con la empresa solicitada.
+        // Así puede cambiar a B, pero conocer el ID de una empresa ajena no permite cambiar a ella.
+        var relacion = _context.MembresiasDeUsuario(usuario.Id)
             .FirstOrDefault(eu => eu.UsuarioId == usuarioId && eu.EmpresaId == empresaId && eu.Activo && eu.Empresa.Activa);
 
         if (relacion == null)
@@ -195,7 +203,9 @@ public class AuthService : IAuthService
 
         var rol = _context.Roles.FirstOrDefault(r => r.Id == relacion.RolId)?.Nombre ?? RolesConstantes.Evaluador;
 
-        var relacionesEmpresa = _context.EmpresaUsuarios
+        // Antes la lista podía quedar limitada por la empresa del token anterior.
+        // Se devuelven las empresas activas del mismo usuario, sin incluir membresías de otros.
+        var relacionesEmpresa = _context.MembresiasDeUsuario(usuario.Id)
             .Where(eu => eu.UsuarioId == usuario.Id && eu.Activo && eu.Empresa.Activa)
             .Select(eu => new EmpresaItemDto { Id = eu.EmpresaId, Nombre = eu.Empresa.Nombre })
             .ToList();

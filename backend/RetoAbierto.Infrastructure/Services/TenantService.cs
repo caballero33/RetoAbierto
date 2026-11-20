@@ -19,8 +19,13 @@ public class TenantService : ITenantService
     {
         get
         {
+            // Antes se leía la empresa sin comprobar la autenticacion y se aceptaba el GUID vacio
+            // Ahora se exige una identidad autenticada y un identificador valido, distinto de cero
+            // Esto evita usar un dato invalido como empresa activa; el filtro decide qué se puede consultar
+            if (!IsAuthenticated)
+                return null;
             var claim = _httpContextAccessor.HttpContext?.User?.FindFirst("empresaId")?.Value;
-            if (!string.IsNullOrEmpty(claim) && Guid.TryParse(claim, out var guid))
+            if (Guid.TryParse(claim, out var guid) && guid != Guid.Empty)
                 return guid;
             return null;
         }
